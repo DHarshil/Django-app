@@ -1,4 +1,4 @@
-FROM python3.11/slim AS builder
+FROM python:3.12-alpine AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ ENV DJANGO_SETTINGS_MODULE=config.settings
 
 RUN python manage.py collectstatic --noinput || true
 
-FROM python3.11/slim AS runner
+FROM python:3.12-alpine AS runner
 
 WORKDIR /app
 
