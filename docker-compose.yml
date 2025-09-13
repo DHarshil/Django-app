@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    image: dj-k8s-practice:latest
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SECRET_KEY: "dev-secret"
+      DJANGO_DEBUG: "1"
+      READINESS_DELAY: "0"
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dj-k8s-practice
+  labels:
+    app: dj-k8s-practice
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dj-k8s-practice
+  template:
+    metadata:
+      labels:
+        app: dj-k8s-practice
+    spec:
+      containers:
+        - name: web
+          image: dj-k8s-practice:latest # replace with your registry image
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dj-k8s-practice-secret
+                  key: DJANGO_SECRET_KEY
+            - name: DJANGO_DEBUG
+              value: "0"
+            - name: ALLOWED_HOSTS
+              value: "*"
+            - name: READINESS_DELAY
+              value: "10" # for practice; /ready returns 503 for first 10s
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /startup
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 2
