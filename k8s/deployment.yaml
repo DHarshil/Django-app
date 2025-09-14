@@ -1,54 +1,52 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dj-k8s-practice
+  creationTimestamp: null
   labels:
-    app: dj-k8s-practice
+    app: django-app
+  name: django-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: dj-k8s-practice
+      app: django-app
   template:
     metadata:
       labels:
-        app: dj-k8s-practice
+        app: django-app
     spec:
       containers:
-        - name: web
-          image: dj-k8s-practice:latest # replace with your registry image
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 8000
-          env:
-            - name: DJANGO_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: dj-k8s-practice-secret
-                  key: DJANGO_SECRET_KEY
-            - name: DJANGO_DEBUG
-              value: "0"
-            - name: ALLOWED_HOSTS
-              value: "*"
-            - name: READINESS_DELAY
-              value: "10" # for practice; /ready returns 503 for first 10s
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: 8000
-            initialDelaySeconds: 3
-            periodSeconds: 3
-            failureThreshold: 3
-          livenessProbe:
-            httpGet:
-              path: /live
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 3
-          startupProbe:
-            httpGet:
-              path: /startup
-              port: 8000
-            failureThreshold: 30
-            periodSeconds: 2
+      - image: dharshil10/django-app:v2
+        name: django-app-01
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 3000
+      - image: dharshil10/django-app:v2
+        name: django-app-02
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8081
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 3000

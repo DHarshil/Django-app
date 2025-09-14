@@ -18,6 +18,8 @@ FROM python:3.12-alpine AS runner
 
 WORKDIR /app
 
+COPY --from=builder /usr/local /usr/local
+
 COPY --from=builder /app /app
 
 ENV DJANGO_SETTINGS_MODULE=config.settings
