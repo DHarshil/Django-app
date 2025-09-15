@@ -20,9 +20,11 @@ data:
     ALLOWED_HOSTS=*
     READINESS_DELAY=10
   gunicorn.conf.py: |
+    import os
     workers = 2
     threads = 2
     timeout = 60
+    bind = f"0.0.0.0:{os.getenv('PORT', '8000')}"
 ---
 apiVersion: v1
 kind: Secret
@@ -68,10 +70,14 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
       containers:
-      - image: dharshil10/django-app:v4
+      - image: dharshil10/django-app:v6
         name: django-app-01
         imagePullPolicy: Always
         env:
+        - name: PORT
+          value: "8080" 
+        - name: GUNICORN_CMD_ARGS
+          value: "-c /usr/src/app/configs/gunicorn.conf.py"
         - name: DB_USERNAME
           valueFrom:
             secretKeyRef:
@@ -83,7 +89,8 @@ spec:
               name: my-secret
               key: DB_PASSWORD
         ports:
-        - containerPort: 8000
+        - containerPort: 8080
+          name: port00
         resources:
           requests:
             cpu: "250m"
@@ -102,11 +109,43 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
-      - image: dharshil10/django-app:v4
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: port00
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 3
+          timeoutSeconds: 10            
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: port00
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 3
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: port00
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 3
+          timeoutSeconds: 10  
+      - image: dharshil10/django-app:v6
         name: django-app-02
+        # command: ["gunicorn"]
+        # args: ["config.wsgi:application", "--bind", "0.0.0.0:8001"]
+        env:
+        - name: PORT
+          value: "8081" 
+        - name: GUNICORN_CMD_ARGS
+          value: "-c /usr/src/app/configs/gunicorn.conf.py"
         imagePullPolicy: Always
         ports:
-        - containerPort: 8001
+        - containerPort: 8081
+          name: port01
         resources:
           requests:
             cpu: "250m"
@@ -125,3 +164,63 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: port01
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 3
+          timeoutSeconds: 10            
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: port01
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 3
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: port01
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          failureThreshold: 3
+          timeoutSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata: 
+  name: app-service-ci
+spec:
+  selector:
+    app: django-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: port00
+    name: http01
+  - protocol: TCP
+    port: 81
+    targetPort: port01
+    name: http02
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-nginx
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: django-app.andy-labs.us
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: app-service-ci
+            port:
+              number: 80

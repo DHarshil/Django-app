@@ -23,6 +23,7 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /app /app
 
 ENV DJANGO_SETTINGS_MODULE=config.settings
-EXPOSE 8000
+ENV PORT=8000
+EXPOSE $PORT
 
 CMD ["gunicorn", "config.wsgi:application"]
